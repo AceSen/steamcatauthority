@@ -1,10 +1,13 @@
 package com.steamcat.authority.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
+import com.steamcat.authority.entity.AuthToken;
 import com.steamcat.authority.entity.LoginParam;
 import com.steamcat.authority.exception.AuthException;
 import com.steamcat.authority.service.IJwtTokenService;
 import com.steamcat.authority.utils.CookieUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -21,8 +24,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +39,8 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class JwtTokenServiceImpl implements IJwtTokenService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(JwtTokenServiceImpl.class);
+
     private static final String GRANTTYPE = "password";
 
     @Value("${auth.clientId}")
@@ -43,6 +48,9 @@ public class JwtTokenServiceImpl implements IJwtTokenService {
 
     @Value("${auth.clientSecret}")
     private String clientSecret;
+
+    @Value("${auth.loginUrl}")
+    private String loginUrl;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -63,9 +71,10 @@ public class JwtTokenServiceImpl implements IJwtTokenService {
         JSONObject jwt = null;
 
         try {
-            jwt = restTemplate.postForObject("http://localhost:8088/authService/oauth/token", getHttpEntity(userName, passWord)
+            jwt = restTemplate.postForObject(loginUrl, getHttpEntity(userName, passWord)
                         , JSONObject.class);
         } catch (RestClientException e) {
+            LOGGER.error("call oauth2 failed, error is {}", e.getMessage());
             throw new AuthException("com.authority.1001");
         }
         // 用户身份短令牌
@@ -73,7 +82,7 @@ public class JwtTokenServiceImpl implements IJwtTokenService {
         // token串存入redis
         boolean isCache = cacheToken(jti, jwt.toJSONString());
         if (!isCache) {
-
+            LOGGER.error("Token store redis failed");
             throw new AuthException("com.authority.1004");
         }
 
@@ -83,9 +92,45 @@ public class JwtTokenServiceImpl implements IJwtTokenService {
         return jti;
     }
 
+    @Override
+    public AuthToken getJwt(HttpServletRequest request) {
+        // 从请求中取cookie中的token
+        String jti = getJtiFromCookie(request);
+        // 从redis中获得用户信息
+        String jwtStr = (String) redisTemplate.opsForValue().get(jti);
+
+        AuthToken authToken = null;
+        try {
+            authToken = JSONObject.parseObject(jwtStr, AuthToken.class);
+            return authToken;
+        } catch (Exception e) {
+            LOGGER.error("token string transform entity failed, error is {}", e.getMessage());
+            throw new AuthException("com.authority.1005");
+        }
+    }
+
+    @Override
+    public boolean loginOut(HttpServletRequest request) {
+        String jti = getJtiFromCookie(request);
+        Boolean isDelete = redisTemplate.delete(jti);
+        // 删除cookie
+        clearCookie(COOKIE_NAME);
+        return true;
+    }
+
+    private String getJtiFromCookie(HttpServletRequest request) {
+        Map<String, String> cookieMap = CookieUtils.getCookie(request, "user-token");
+        return cookieMap.get("user-token");
+    }
+
     private void saveCookie(String jti) {
         HttpServletResponse response = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
         CookieUtils.addCookie(response, domain, "/", COOKIE_NAME, jti, -1, false);
+    }
+
+    private void clearCookie(String jti) {
+        HttpServletResponse response = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getResponse();
+        CookieUtils.addCookie(response, domain, "/", COOKIE_NAME, jti, 0, false);
     }
 
     private boolean cacheToken(String jti, String jwt) {

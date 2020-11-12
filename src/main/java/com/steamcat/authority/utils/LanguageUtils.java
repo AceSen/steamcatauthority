@@ -1,5 +1,11 @@
 package com.steamcat.authority.utils;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpRequest;
+import org.springframework.stereotype.Component;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import java.util.Locale;
 
 /**
@@ -9,20 +15,25 @@ import java.util.Locale;
  * @Data 下午 11:10
  * @Version 1.0
  **/
+@Component
 public class LanguageUtils {
-    private static String language;
-    private static String country;
+    @Autowired
+    HttpServletRequest request;
 
-    public static void setLanguage(String language) {
-        LanguageUtils.language = language;
-        LanguageUtils.country = getCountry();
+    private static String getCountry(String language) {
+        return "en".equals(language) ? "US" : "CN";
     }
 
-    private static String getCountry() {
-        return "en".equals(LanguageUtils.language) ? "US" : "CN";
-    }
-
-    public static Locale getLocale() {
-        return new Locale(LanguageUtils.language, LanguageUtils.country);
+    public Locale getLocale() {
+        Cookie[] cookies = request.getCookies();
+        String language = "zh";
+        if (cookies != null && cookies.length > 0) {
+            for (Cookie cookie : cookies) {
+                if ("language".equals(cookie.getName())) {
+                    language = cookie.getValue();
+                }
+            }
+        }
+        return new Locale(language, getCountry(language));
     }
 }

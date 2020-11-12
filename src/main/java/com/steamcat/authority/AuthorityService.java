@@ -3,8 +3,10 @@ package com.steamcat.authority;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+//import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,10 +19,15 @@ import org.springframework.web.client.RestTemplate;
  **/
 @MapperScan("com.steamcat.authority.dao")
 @SpringBootApplication
-@EnableEurekaClient
-public class AuthorityService {
+//@EnableEurekaClient
+public class AuthorityService extends SpringBootServletInitializer {
     public static void main(String[] args) {
-        SpringApplication.run(AuthorityService.class);
+        SpringApplication.run(AuthorityService.class, args);
+    }
+
+    @Override
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
+        return builder.sources(AuthorityService.class);
     }
 
     @Bean

@@ -1,5 +1,6 @@
 package com.steamcat.authority.utils;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
@@ -22,6 +23,9 @@ public class MessageSourceUtils {
     private String encoding;
     private static MessageSource messageSource;
 
+    @Autowired
+    private LanguageUtils languageUtils;
+
 
     private ReloadableResourceBundleMessageSource bundleMessageSource = new ReloadableResourceBundleMessageSource();
     @PostConstruct
@@ -35,7 +39,7 @@ public class MessageSourceUtils {
         messageSource = bundleMessageSource;
     }
 
-    public static String getMessage(String key) {
-        return messageSource.getMessage(key, null, LanguageUtils.getLocale());
+    public String getMessage(String key) {
+        return messageSource.getMessage(key, null, languageUtils.getLocale());
     }
 }

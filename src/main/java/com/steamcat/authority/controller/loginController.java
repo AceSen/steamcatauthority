@@ -1,6 +1,7 @@
 package com.steamcat.authority.controller;
 
 import com.alibaba.fastjson.JSONObject;
+import com.steamcat.authority.entity.AuthToken;
 import com.steamcat.authority.entity.LoginParam;
 import com.steamcat.authority.entity.ResultEntity;
 import com.steamcat.authority.exception.AuthException;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * @ClassName loginController
@@ -39,4 +42,18 @@ public class loginController {
         String token = JwtTokenService.generateToken(loginParam);
         return ResultEntity.success(token);
     }
+
+    @PostMapping("/userJwt")
+    public ResultEntity userJwt(HttpServletRequest request) {
+        AuthToken jwtToken = JwtTokenService.getJwt(request);
+        return ResultEntity.success(jwtToken);
+    }
+
+    @PostMapping("/loginOut")
+    public ResultEntity loginOut(HttpServletRequest request) {
+        return ResultEntity.success(JwtTokenService.loginOut(request));
+    }
+
+
+
 }

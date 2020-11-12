@@ -5,6 +5,8 @@ import com.steamcat.authority.entity.ResultEntity;
 import com.steamcat.authority.utils.MessageSourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.flyway.FlywayDataSource;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -19,11 +21,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class AuthExceptionExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(AuthException.class);
 
+    @Autowired
+    private MessageSourceUtils messageSourceUtils;
+
     @ExceptionHandler(value = Exception.class)
     public ResultEntity<AuthException> exceptionHandler(Exception exception) {
+        exception.printStackTrace();
         if (exception instanceof AuthException) {
             AuthException authException = (AuthException) exception;
-            String errorMessage = MessageSourceUtils.getMessage(authException.getErrorCode());
+            String errorMessage = messageSourceUtils.getMessage(authException.getErrorCode());
             logger.error("error code:{}, error message:{}", authException.getErrorCode(), errorMessage);
             authException.setErrorMessage(errorMessage);
             return ResultEntity.fail(authException.getErrorCode(), authException.getErrorMessage());
